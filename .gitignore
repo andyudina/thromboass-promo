@@ -1,0 +1,12 @@
+*.*~
+*.pyc
+*.DS_Store
+
+thromboass_webapp/localsettings.py
+thromboass_webapp/media/**/*
+
+consultations/migrations/[0-9]*
+content/migrations/[0-9]*
+diagnostics/migrations/[0-9]*
+
+thromboass_webapp/deploy/secret.py
