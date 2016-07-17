@@ -18,11 +18,11 @@ from django.contrib import admin
 
 from consultations import urls as consult_urls
 from content import urls as content_urls
-from diagnostic import urls as diagnostic_urls
+from diagnostics import urls as diagnostic_urls
 
 urlpatterns = [
     url(r'^admin/', include(admin.site.urls)),
     url(r'^(ajax/)?consultations/', include(consult_urls)),
-    url(r'^(ajax/)?content/', include(content_urls)),
-    url(r'^(ajax/)?diagnostic/', include(diagnostic_urls)),    
+    url(r'^(ajax/)?diagnostic/', include(diagnostic_urls)),
+    url(r'', include(content_urls)),    
 ]

@@ -2,8 +2,9 @@
 
 from django.db import models
 from django.utils import timezone
-
 from tinymce.models import HTMLField
+
+from thromboass_webapp.utils.base_model import JSONMixin
 
 class MainPageCarousel(models.Model):
     video = models.CharField('Video', max_length=255, null=True, blank=True)
@@ -53,7 +54,7 @@ class DeseaseInfo(models.Model):
 class Item(models.Model):
     description_title = models.CharField(u'Описание препарата и состав: Заголовок', max_length=255)
     description_text = HTMLField(u'Описание препарата и состав: текст')
-    description_infographic = models.ImageField(u'Описание препарата и состав: Инфографика', upload_to='media/'),
+    description_infographic = models.ImageField(u'Описание препарата и состав: Инфографика', upload_to='media/')
             
     application = HTMLField(u'Показания к применению')
     
@@ -86,7 +87,7 @@ class Test(models.Model):
         verbose_name = u"Тест"
         verbose_name_plural = u"Тесты"
                
-class Article(models.Model):
+class Article(models.Model, JSONMixin):
     title = models.CharField(u'Заголовок', max_length=255) #TODO: detailed blocks??
     text = HTMLField(u'Текст')  
     preview = models.TextField(u'Превью')

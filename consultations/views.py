@@ -55,15 +55,24 @@ class Consut2FAQView(StaffOnlyView):
         except Consultation.DoesNotExist:
             return Http404
             
+        if not request.POST.get('answer') and not consultation.answer:
+            return self.error('not_enough_fields', ['answer', ])
+            
         if hasattr(consultation, 'faq') and consultation.faq:
             return self.error('already_in_faq')
               
-        EXPECTED_PARAMS = ['is_on_faq_page', 'is_on_item_page']
+        EXPECTED_PARAMS = ['is_on_faq_page', 'is_on_item_page', 'answer']
         params = {key: request.POST.get(key) for key in EXPECTED_PARAMS if request.POST.get(key) is not None}
         params.update({
             'source_consultation': consultation,
             'question': consultation.question,
-            'answer': consultation.answer,
         })
+        
+        if params.get('answer'):
+            Consultation.objects.filter(id=kwargs.get('id')).update(answer=params.get('answer'))
+        else:
+            params['answer'] = consultation.answer
+                
         FAQ.objects.create(**params)
+        
         return HttpResponse()   

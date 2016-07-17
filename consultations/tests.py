@@ -4,7 +4,7 @@ from django.test import TestCase, Client
 from django.contrib.auth.models import Permission, Group
 from django.contrib.contenttypes.models import ContentType
 
-from consultations.models import Consultation, FAQ, Consultant, CONSULTANT_PERMISSION_NAME
+from consultations.models import Consultation, FAQ, Consultant, CONSULTANT_GROUP_NAME
 from thromboass_webapp.utils import generate_random_sequence
 
 BASE_URL = '/ajax/consultations/'
@@ -18,7 +18,7 @@ CONSULT_PASSWORD = 'consultant'
 class ConsultationsTestCase(TestCase):
     @classmethod
     def _create_group4consultants(cls):
-        consultants_group, created = Group.objects.get_or_create(name='consultants')
+        consultants_group, created = Group.objects.get_or_create(name=CONSULTANT_GROUP_NAME)
         ct = ContentType.objects.get_for_model(Consultation)
         for permission_action in ['add', 'change', 'delete']:
             permission = Permission.objects.create(
@@ -29,6 +29,7 @@ class ConsultationsTestCase(TestCase):
             
     @classmethod
     def setUpClass(cls):
+        super(ConsultationsTestCase, cls).setUpClass()
         cls._create_group4consultants()
         cls.consultant = Consultant.objects.create_with_user(email=CONSULT_USERNAME, password=CONSULT_PASSWORD)
         
@@ -36,9 +37,9 @@ class ConsultationsTestCase(TestCase):
         self.client = Client()
         
     def test_create_consultant(self):
-        consultant = Consultant.objects.create(email='test@test.test', password='test')
-        permission = Permisson.objects.get(name=CONSULTANT_PERMISSION_NAME)
-        self.assertEqual(consultant.groups.filter(permission_id=permission.id).count(), 1)
+        consultant = Consultant.objects.create_with_user(email='test@test.test', password='test')
+        group = Group.objects.get(name=CONSULTANT_GROUP_NAME)
+        self.assertEqual(consultant.user.groups.filter(id=group.id).count(), 1)
         
     def _ask_consultation(self, **kwargs):
         return self.client.post(BASE_URL, kwargs)
@@ -46,12 +47,12 @@ class ConsultationsTestCase(TestCase):
     def test_ask_consultation__success_obj_created(self):
         unique_name = generate_random_sequence()
         response = self._ask_consultation(name=unique_name, email='test@test.ru', question='this is test question')
-        self.assertEqual(response.statuse_code, SUCCESS_STATUS)
+        self.assertEqual(response.status_code, SUCCESS_STATUS)
         self.assertEqual(Consultation.objects.filter(name=unique_name).count(), 1)
                 
     def test_ask_consultation__not_enough_fields(self):
         response = self._ask_consultation(email='test@test.ru', question='this is test question')
-        self.assertEqual(response.statuse_code, BAD_REQUEST_STATUS)
+        self.assertEqual(response.status_code, BAD_REQUEST_STATUS)
         self.assertItemsEqual(json.loads(response.content)['fields'], ['name', ])
      
     def _create_consultation(self, **kwargs):
@@ -71,8 +72,8 @@ class ConsultationsTestCase(TestCase):
     def test_answer_consultation__success(self):
         self.client.login(username=CONSULT_USERNAME, password=CONSULT_PASSWORD) 
         answer = generate_random_sequence()
-        consultation, reponse = self._post_answer_to_consult(answer)
-        self.assertEqual(response.statuse_code, SUCCESS_STATUS)
+        consultation, response = self._post_answer_to_consult(answer)
+        self.assertEqual(response.status_code, SUCCESS_STATUS)
         consultation = Consultation.objects.get(id=consultation.id)
         self.assertTrue(consultation.answer, answer)
         self.assertTrue(consultation.is_answered)
@@ -80,7 +81,7 @@ class ConsultationsTestCase(TestCase):
         
     def test_answer_consultation__not_enough_rights(self):
         answer = generate_random_sequence()
-        consultation, reponse = self._post_answer_to_consult(answer)
+        consultation, response = self._post_answer_to_consult(answer)
         self.assertEqual(response.status_code, FORBIDDEN_CODE)
         consultation = Consultation.objects.get(id=consultation.id)
         self.assertIsNone(consultation.answer)
@@ -115,9 +116,9 @@ class ConsultationsTestCase(TestCase):
         question = generate_random_sequence()
         _, response = self._add_to_faq(
             question,
-            is_on_faq_page=is_on_faq_page,
-            is_on_item_page=is_on_item_page,
-            answer=answer
+            is_on_faq_page=True,
+            is_on_item_page=False,
+            answer='test'
         )    
         self.assertEqual(response.status_code, FORBIDDEN_CODE)
         self.assertEqual(FAQ.objects.count(question=question), 0)  

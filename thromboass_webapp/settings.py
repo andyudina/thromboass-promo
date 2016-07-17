@@ -138,3 +138,5 @@ CACHES = {
         'LOCATION': '127.0.0.1:11211',
     }
 }
+
+BASE_VIEW_CACHE_TIME = 60 * 15

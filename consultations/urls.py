@@ -1,6 +1,6 @@
 from django.conf.urls import url
 
-from consultation.views import ConsultView, ConsultUpdateView, Consut2FAQView
+from consultations.views import ConsultView, ConsultAnswerView, Consut2FAQView
 
 urlpatterns = [
     url(r'^$', ConsultView.as_view()),

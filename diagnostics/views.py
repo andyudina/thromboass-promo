@@ -34,7 +34,10 @@ class AnswerQuestionView(BaseView):
             
         if anwer.question_id != question.id:
             return self.error('answer_and_question_dont_match', [], _NOT_FOUND)
-        TestToUser.objects.answer2question(user=request.user, answer=answer)
+        try:
+            TestToUser.objects.answer2question(user=request.user, answer=answer)
+        except ValueError:
+            return self.error('cant_skip_questions') 
         return HttpResponse()
             
                    

@@ -7,12 +7,15 @@ from django.utils import timezone
 from tinymce.models import HTMLField
 
 from thromboass_webapp.utils import get_preview
+from thromboass_webapp.utils.base_model import JSONMixin
+
+CONSULTANT_GROUP_NAME='consultants'
 
 class ShortQuestionMixin(object):
     def __unicode__(self):
         return get_preview(self.question)    
         
-class FAQ(models.Model, ShortQuestionMixin): 
+class FAQ(models.Model, ShortQuestionMixin, JSONMixin): 
     source_consultation = models.OneToOneField(
         'Consultation', null=True, blank=True, 
          verbose_name=u"Консультация, откуда появился вопрос"
@@ -54,7 +57,7 @@ class Consultation(models.Model, ShortQuestionMixin):
         verbose_name_plural = u"Консультации"
 
 def _save_user_group(user):
-    group = Group.objects.get(name='consultants') #SHOULD BE ALREADY CREATED BEFORE ! -> do it in admin
+    group = Group.objects.get(name=CONSULTANT_GROUP_NAME) #SHOULD BE ALREADY CREATED BEFORE ! -> do it in admin
     user.groups.add(group) 
     user.is_staff = True
     user.save(update_fields=['is_staff', ])
@@ -71,8 +74,10 @@ class ConsultantManager(models.Manager):
         return consultant
                
 class Consultant(models.Model):
-    user = models.ForeignKey('auth.User')    
-
+    user = models.ForeignKey('auth.User')  
+      
+    objects = ConsultantManager()
+    
     def save(self, *args, **kwargs):
         is_new = not hasattr(self, 'pk') or not self.pk
         consultant = super(Consultant, self).save(*args, **kwargs)

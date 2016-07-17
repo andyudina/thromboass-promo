@@ -1,4 +1,5 @@
 from django.test import TestCase, Client
+from django.core.cache import cache
 
 from content.models import Item
 from thromboass_webapp.utils import generate_random_sequence
@@ -26,14 +27,16 @@ class ContentTestCase(TestCase):
         
     @classmethod
     def setUpClass(cls):
+        super(ContentTestCase, cls).setUpClass()
         cls._create_item()
         
     def setUp(self):
         self.client = Client()
             
     def test_item_page(self):
-        '''check whether Jinja2 properly rendered our page'''
+        '''check whether our page was rendered properly'''
+        cache._cache.flush_all()
         response = self.client.get(BASE_URL)
         self.assertIn('html',  response.get('Content-Type'))
-        self.assertIn(cls.random_title, response.content)
+        self.assertIn(self.random_title, response.content)
         

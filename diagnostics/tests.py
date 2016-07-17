@@ -47,6 +47,7 @@ class DiagnosticTestCase(TestCase):
                     
     @classmethod
     def setUpClass(cls):
+        super(DiagnosticTestCase, cls).setUpClass()
         cls._create_test() #2 questions * 2 answers == 3 results
     
     def setUp(self):
@@ -93,7 +94,7 @@ class DiagnosticTestCase(TestCase):
         #process result
         result = self.get_next()
         self.asserEqual(result.get('type'), 'result')
-        self.assertEqual(result.get('result'), 'result3')
+        self.assertEqual(result.get('result').get('result'), 'result3')
         
     def test_pass_test__send_invalid_answer(self):
         NUMERIC_CONSTANT_GREATER_THAN_ANSWERS_NUMBER = 5

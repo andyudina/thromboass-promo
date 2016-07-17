@@ -10,7 +10,8 @@ _ERRORS = {
     'already_in_faq': u'Уже добавлена в FAQ',
     'question_not_found': u'Такого вопроса не существует',
     'answer_not_found': u'Такого ответа не существует',
-    'answer_and_question_dont_match': u'Такого ответа на этот вопрос не существует'
+    'answer_and_question_dont_match': u'Такого ответа на этот вопрос не существует',
+    'cant_skip_questions': u'Нельзя пропустить вопрос'
 }
 
 class ParamsValidationError(ValueError):
