@@ -41,6 +41,7 @@ INSTALLED_APPS = (
     'content',
     'diagnostics',
     'tinymce',
+    'djcelery'
 )
 
 MIDDLEWARE_CLASSES = (
@@ -99,3 +100,41 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 from localsettings import *
+
+SENDGRID_API_KEY = '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'
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': '/var/log/thromboass-webapp.log',
+        },
+    },
+    'loggers': {
+        'DEFAULT': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+}
+
+# CONSULTANT EMAILS 
+BASE_URL = 'http://127.0.0.1:8000/'
+CONSULTANT_EMAIL = 'anastasia@picasel.agency'
+INFO_EMAIL = 'anastasia@picasel.agency'
+
+# CELERY
+CELERY_RESULT_BACKEND='djcelery.backends.cache:CacheBackend'
+BROKER_URL = 'redis://localhost:6379/0'
+
+# CACHE
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+        'LOCATION': '127.0.0.1:11211',
+    }
+}

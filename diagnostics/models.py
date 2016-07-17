@@ -8,8 +8,16 @@ from thromboass_webapp.utils import get_preview
 
 def get_next_question_number():
     return TestQuestion.objects.count() + 1
-    
-class TestQuestion(models.Model):
+
+class JSONMixin(object):
+    def to_json(self):
+        json_ = self.__dict__.copy()
+        del json_['_state']  # Deleting standard django model _state field with meta information
+        for key in json_.keys(): # Delete cached fields
+            if 'cache' in key: del json_[key]
+        return json_
+            
+class TestQuestion(models.Model, JSONMixin):
     question = HTMLField(u'Вопрос')
     order_number = models.IntegerField(u'Порядковый номер', default=get_next_question_number)
     
@@ -20,7 +28,7 @@ class TestQuestion(models.Model):
         verbose_name = u"Вопрос"
         verbose_name_plural = u"Вопросы" 
             
-class TestAnswer(models.Model):
+class TestAnswer(models.Model, JSONMixin):
     question = models.ForeignKey('TestQuestion')
     answer = HTMLField(u'Ответ')
     order_number = models.IntegerField(u'Порядковый номер', default=1)
@@ -33,15 +41,22 @@ class TestAnswer(models.Model):
         verbose_name = u"Ответ"
         verbose_name_plural = u"Ответы" 
                         
-class TestResult(models.Model):
+class TestResult(models.Model, JSONMixin):
     score = models.IntegerField(u'Балл', default=0)
     result = HTMLField(u'Результат')
     video = models.CharField('Video', max_length=255, null=True, blank=True)
     image = models.CharField(u'Фото', max_length=255, null=True, blank=True)
         
-    related_questions = models.ForeignKey('consultations.FAQ', verbose_name=u'Типовые вопросы')
-    related_articles = models.ForeignKey('content.Article', verbose_name=u'Релевантные статьи')
+    related_questions = models.ManyToManyField('consultations.FAQ', verbose_name=u'Типовые вопросы')
+    related_articles = models.ManyToManyField('content.Article', verbose_name=u'Релевантные статьи')
     
+    def to_json(self):
+        json_ = super(TestResult, self).to_json()
+        for key in ['related_questions', 'related_articles']:
+            del json_[key]
+        json_['solutions'] = [solution.to_json() for solution in self.testresultsolution_set()]
+        return json_
+        
     def __unicode__(self):
         return get_preview(self.result)
 
@@ -61,12 +76,32 @@ class TestResultSolution(models.Model):
     class Meta:
         verbose_name = u"Решение"
         verbose_name_plural = u"Решения"     
-  
+ 
+class TestToUserManager(models.Manager):
+    def start_new_test(self, **kwargs):
+    # close prev unfinished tests if exist by setting its end_datetime
+    # create new one
+    
+    def get_next_step(self, **kwargs):
+    # if has no tests, start new one
+    # get last test by start_datetime
+    # if test has no not-answered questions, close it and show result (check if result already calculated)
+    # if test has not-answered questions, return one
+    # entities should know their types
+    
+    def answer2question(self, **kwargs):
+    # get last test
+    # if it finished, unfinnish it
+    # get last question. if has gap btw questions, raise error
+    # answer question
+         
 class TestToUser(models.Model):
     user = models.ForeignKey('auth.User')
     start_datetime = models.DateTimeField(default=timezone.now)
     end_datetime = models.DateTimeField(null=True, blank=True)
     result = models.ForeignKey('TestResult', null=True, blank=True)
+    
+    objects = TestToUserManager()
     
     @property
     def is_completed(self):

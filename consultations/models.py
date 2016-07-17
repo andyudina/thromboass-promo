@@ -13,6 +13,10 @@ class ShortQuestionMixin(object):
         return get_preview(self.question)    
         
 class FAQ(models.Model, ShortQuestionMixin): 
+    source_consultation = models.OneToOneField(
+        'Consultation', null=True, blank=True, 
+         verbose_name=u"Консультация, откуда появился вопрос"
+    )
     question = HTMLField(u'Вопрос') 
     answer = HTMLField(u'Ответ')
     
@@ -26,15 +30,25 @@ class FAQ(models.Model, ShortQuestionMixin):
 class Consultation(models.Model, ShortQuestionMixin):
     name = models.CharField(u'Имя', max_length=255)
     email = models.EmailField(u'Email', max_length=255)
-    is_answered = models.BooleanField(u'На вопрос ответили', default=False)
     question = models.TextField(u'Вопрос') 
     answer = models.TextField(u'Ответ', null=True, blank=True)
     created_at = models.DateTimeField(u'Дата и время создания', default=timezone.now)
     
-    #TODO: down't show in admin
-    answered_consultant = models.ForeignKey('Consultant', null=True, blank=True)
+    answered_consultant = models.ForeignKey('auth.User', null=True, blank=True)
     answered_datetime = models.DateTimeField(u'Дата и время ответа', null=True, blank=True)
+    notification_sent_at = models.DateTimeField(u'Дата и время отправки уведомления коснультанту', null=True, blank=True)
+    answer_sent_at = models.DateTimeField(
+        u'Дата и время отправки ответа', 
+        null=True, blank=True) #shoudn't be hidden in admin -> need for js check answer logic
     
+    @property
+    def is_answered(self):
+        return not not self.answer_sent_at
+        
+    @property
+    def is_notification_sent(self):
+        return not not self.notification_sent_at
+        
     class Meta:
         verbose_name = u"Консультация"
         verbose_name_plural = u"Консультации"
@@ -60,8 +74,6 @@ class Consultant(models.Model):
     user = models.ForeignKey('auth.User')    
 
     def save(self, *args, **kwargs):
-        print not hasattr(self, 'pk') 
-        print not self.pk
         is_new = not hasattr(self, 'pk') or not self.pk
         consultant = super(Consultant, self).save(*args, **kwargs)
         if is_new: _save_user_group(self.user)

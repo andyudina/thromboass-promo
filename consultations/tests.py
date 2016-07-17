@@ -76,7 +76,7 @@ class ConsultationsTestCase(TestCase):
         consultation = Consultation.objects.get(id=consultation.id)
         self.assertTrue(consultation.answer, answer)
         self.assertTrue(consultation.is_answered)
-        self.assetEqual(consultation.answered_consultant_id, self.consultant.id)
+        self.assetEqual(consultation.answered_consultant_id, self.consultant.user_id)
         
     def test_answer_consultation__not_enough_rights(self):
         answer = generate_random_sequence()
