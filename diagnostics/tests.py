@@ -2,11 +2,11 @@ import json
 
 from django.test import TestCase, Client
 
-from diagnostic.models import TestQuestion, TestAnswer, TestResult
+from diagnostics.models import TestQuestion, TestAnswer, TestResult
 
 BASE_URL = '/ajax/diagnostic/'
 SUCCESS_STATUS = 200
-BAD_REQUEST_STATUS = 400
+NOT_FOUND_STATUS = 404
 
 class DiagnosticTestCase(TestCase):
     @classmethod
@@ -69,7 +69,7 @@ class DiagnosticTestCase(TestCase):
             BASE_URL + 'next/'
         )
         self.assertEqual(response.status_code, SUCCESS_STATUS)
-        return json.loads(response)
+        return json.loads(response.content)
 
     def _process_question_success(self, index):
         question = self._get_next()
@@ -78,29 +78,29 @@ class DiagnosticTestCase(TestCase):
         # answer first question
         response = self._answer_question(
             question=question.get('question').get('id'),
-            answer=question.get('question').get('answers')[0].get('id')
+            answer=question.get('answers')[0].get('id')
         )
         self.assertEqual(response.status_code, SUCCESS_STATUS)
                    
     def test_pass_test__success(self):
         # init
-        respone = self._init_test()
+        response = self._init_test()
         self.assertEqual(response.status_code, SUCCESS_STATUS)
         
         # get&answer questions:
         for index in xrange(2):
-            self._process_question_success(index)
+            self._process_question_success(index + 1)
             
         #process result
-        result = self.get_next()
-        self.asserEqual(result.get('type'), 'result')
+        result = self._get_next()
+        self.assertEqual(result.get('type'), 'result')
         self.assertEqual(result.get('result').get('result'), 'result3')
         
     def test_pass_test__send_invalid_answer(self):
         NUMERIC_CONSTANT_GREATER_THAN_ANSWERS_NUMBER = 5
         
         # init
-        respone = self._init_test()
+        response = self._init_test()
         self.assertEqual(response.status_code, SUCCESS_STATUS)
         
         # get question
@@ -110,6 +110,6 @@ class DiagnosticTestCase(TestCase):
         # send wrong answer
         response = self._answer_question(
             question=question.get('question').get('id'),
-            answer=question.get('question').get('answers')[0].get('id') + NUMERIC_CONSTANT_GREATER_THAN_ANSWERS_NUMBER
+            answer=question.get('answers')[0].get('id') + NUMERIC_CONSTANT_GREATER_THAN_ANSWERS_NUMBER
         )
-        self.assertEqual(response.status_code, BAD_REQUEST_STATUS)        
+        self.assertEqual(response.status_code, NOT_FOUND_STATUS)        

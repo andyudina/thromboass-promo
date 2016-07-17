@@ -18,6 +18,11 @@ class ParamsValidationError(ValueError):
     pass
     
 class BaseView(View):
+    def transform(self, val):
+        if val.lower() in ['false', 'true']:
+            return val.lower() == 'true'
+        return val
+        
     def validate_necessary_params(self, got_params, expected_params):
         filtered_params = self.filter_params(got_params, expected_params)
         if len(filtered_params) < len(expected_params):
@@ -26,7 +31,7 @@ class BaseView(View):
         return filtered_params
             
     def filter_params(self, request_dict, FIELDS):
-        return  {field: request_dict.get(field) for field in FIELDS if request_dict.get(field)}
+        return  {field: self.transform(request_dict.get(field)) for field in FIELDS if request_dict.get(field)}
         
     def error(self, error_code, error_fields=[], status_code=_BAD_REQUEST):
         error_ = {

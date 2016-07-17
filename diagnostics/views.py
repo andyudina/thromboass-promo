@@ -1,4 +1,4 @@
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse, Http404, JsonResponse
 
 from thromboass_webapp.utils.base_view import BaseView, ParamsValidationError
 from diagnostics.models import TestQuestion, TestAnswer, TestResult, TestToUser, TestQuestionToUser
@@ -32,7 +32,7 @@ class AnswerQuestionView(BaseView):
         except TestAnswer.DoesNotExist:
             return self.error('answer_not_found', [], _NOT_FOUND)
             
-        if anwer.question_id != question.id:
+        if answer.question_id != question.id:
             return self.error('answer_and_question_dont_match', [], _NOT_FOUND)
         try:
             TestToUser.objects.answer2question(user=request.user, answer=answer)

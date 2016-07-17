@@ -27,7 +27,7 @@ class TestQuestion(models.Model, JSONMixin):
         return {
             'type': 'question',
             'question': json_,
-            'answers': [answer.to_json() for answer in self.testanswer_set.all()],
+            'answers': [answer.to_json() for answer in self.testanswer_set.order_by('order_number')],
         }
                     
 class TestAnswer(models.Model, JSONMixin):
@@ -54,9 +54,7 @@ class TestResult(models.Model, JSONMixin):
     
     def to_json(self):
         json_ = super(TestResult, self).to_json()
-        for key in ['related_questions', 'related_articles']:
-            del json_[key]
-        json_['solutions'] = [solution.to_json() for solution in self.testresultsolution_set()]
+        json_['solutions'] = [solution.to_json() for solution in self.testresultsolution_set.all()]
         return {
             'type': 'result',
             'result': json_,
@@ -180,7 +178,7 @@ class TestToUser(models.Model):
         return result
 
 class TestQuestionToUser(models.Model):
-    test2user = models.ForeignKey('TestResult')
+    test2user = models.ForeignKey('TestToUser')
     answered_at = models.DateTimeField(default=timezone.now)
     question = models.ForeignKey('TestQuestion')
     answer = models.ForeignKey('TestAnswer')      

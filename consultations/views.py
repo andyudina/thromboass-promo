@@ -1,4 +1,4 @@
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse, Http404, HttpResponseForbidden
 from django.utils.decorators import method_decorator
 from django.contrib.admin.views.decorators import staff_member_required
 
@@ -17,11 +17,17 @@ class ConsultView(BaseView):
         send_notification2consultant.delay(consultation.id)
         return HttpResponse()
 
+def is_staff_decoraror(f):
+    def wrapped(self, request, *args, **kwargs):
+        if not request.user.is_staff: return HttpResponseForbidden()
+        return f(self, request, *args, **kwargs)    
+    return wrapped
+    
 class StaffOnlyView(BaseView):
     # TODO: assumes that there are only 2 types of user: admins(superuser) and consultants -> basic staff
     # TODO: doesn't check permission for consultations directly
     # TODO: so can broke security on next growth -> better rewrite proper checks
-    @method_decorator(staff_member_required)
+    @is_staff_decoraror
     def dispatch(self, request, *args, **kwargs):
         return super(StaffOnlyView, self).dispatch(request, *args, **kwargs)
                     
@@ -62,7 +68,7 @@ class Consut2FAQView(StaffOnlyView):
             return self.error('already_in_faq')
               
         EXPECTED_PARAMS = ['is_on_faq_page', 'is_on_item_page', 'answer']
-        params = {key: request.POST.get(key) for key in EXPECTED_PARAMS if request.POST.get(key) is not None}
+        params = self.filter_params(request.POST, EXPECTED_PARAMS)
         params.update({
             'source_consultation': consultation,
             'question': consultation.question,
@@ -72,7 +78,7 @@ class Consut2FAQView(StaffOnlyView):
             Consultation.objects.filter(id=kwargs.get('id')).update(answer=params.get('answer'))
         else:
             params['answer'] = consultation.answer
-                
+             
         FAQ.objects.create(**params)
         
         return HttpResponse()   
