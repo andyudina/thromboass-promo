@@ -16,7 +16,12 @@ class NextStepView(BaseView):
    def get(self, request, *args, **kwargs):
        next_step = TestToUser.objects.get_next_step(user=request.user)
        return JsonResponse(next_step.to_json(), safe=False)
-       
+
+class PreviousStepView(BaseView):
+   def get(self, request, *args, **kwargs):
+       prev_step = TestToUser.objects.get_prev_step(user=request.user, current=request.GET.get('current', 1))
+       return JsonResponse(prev_step, safe=False)
+              
 class AnswerQuestionView(BaseView):
    def post(self, request, *args, **kwargs):
         try:

@@ -18,16 +18,25 @@ class DiagnosticTestCase(TestCase):
         {
             'question': 'test question 1',
             'order_number': 1
-        }]
+        },
+        {
+            'question': 'test question 3',
+            'order_number': 3
+        }
+        ]
         
         test_answers = [
             [
-                {'answer': 'answer 1', 'score': 1, 'order_number': 2},
-                {'answer': 'answer 2', 'score': 2, 'order_number': 1}
+                {'answer': 'answer 1', 'score': 1, 'order_number': 2, 'id': 1},
+                {'answer': 'answer 2', 'score': 2, 'order_number': 1, 'id': 2}
             ],
             [
-                {'answer': 'answer 3', 'score': 1, 'order_number': 2},
-                {'answer': 'answer 4', 'score': 2, 'order_number': 1}
+                {'answer': 'answer 3', 'score': 1, 'order_number': 2, 'id': 3},
+                {'answer': 'answer 4', 'score': 2, 'order_number': 1, 'id': 4}
+            ],
+            [
+                {'answer': 'answer 5', 'score': 0, 'order_number': 1, 'id': 5}, #not necessary for result tests
+                {'answer': 'answer 6', 'score': 0, 'order_number': 2, 'id': 6}
             ],
         ]
         
@@ -71,6 +80,14 @@ class DiagnosticTestCase(TestCase):
         self.assertEqual(response.status_code, SUCCESS_STATUS)
         return json.loads(response.content)
 
+    def _get_prev(self, order_number):
+        response =  self.client.get(
+            BASE_URL + 'prev/',
+            {'current': order_number}
+        )
+        self.assertEqual(response.status_code, SUCCESS_STATUS)
+        return json.loads(response.content)
+        
     def _process_question_success(self, index):
         question = self._get_next()
         self.assertEqual(question.get('type'), 'question')
@@ -88,13 +105,37 @@ class DiagnosticTestCase(TestCase):
         self.assertEqual(response.status_code, SUCCESS_STATUS)
         
         # get&answer questions:
-        for index in xrange(2):
+        for index in xrange(3):
             self._process_question_success(index + 1)
             
         #process result
         result = self._get_next()
         self.assertEqual(result.get('type'), 'result')
         self.assertEqual(result.get('result').get('result'), 'result3')
+     
+    def test_go2prev(self):
+        FIRST_QUESTION_ORDER_NUMBER = 1
+        THIRD_QUESTION_ORDER_NUMBER = 3
+        FIRST_QUESTION_SELECTED_ANSWER_ID = 4
+        
+        # init
+        response = self._init_test()
+        self.assertEqual(response.status_code, SUCCESS_STATUS)
+        
+        # answer first and second question:
+        for index in xrange(2):
+            self._process_question_success(index + 1)
+        
+        # get third question
+        question = self._get_next()
+        self.assertEqual(question.get('type'), 'question')
+        self.assertEqual(question.get('question').get('order_number'), THIRD_QUESTION_ORDER_NUMBER) # check it is REALLY second
+        
+        # get previous question for first one
+        question = self._get_prev(2)
+        self.assertEqual(question.get('type'), 'question')
+        self.assertEqual(question.get('question').get('order_number'), FIRST_QUESTION_ORDER_NUMBER) # check it is actually first       
+        self.assertEqual(question.get('selected_answer_id'), FIRST_QUESTION_SELECTED_ANSWER_ID) # check preselected answer       
         
     def test_pass_test__send_invalid_answer(self):
         NUMERIC_CONSTANT_GREATER_THAN_ANSWERS_NUMBER = 5
