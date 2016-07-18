@@ -10,10 +10,18 @@ from thromboass_webapp.utils.base_model import JSONMixin
 def get_next_question_number():
     return TestQuestion.objects.count() + 1
 
-            
+
+class TestQuestionManager(models.Manager):
+    def max_order_number(self):
+        return self.aggregate(
+            models.Max('order_number')
+        )['order_number__max'] 
+                
 class TestQuestion(models.Model, JSONMixin):
     question = HTMLField(u'Вопрос')
     order_number = models.IntegerField(u'Порядковый номер', default=get_next_question_number)
+    
+    objects = TestQuestionManager()
     
     def __unicode__(self):
         return u'Вопрос №{}'.format(self.order_number)
@@ -109,7 +117,23 @@ class TestToUserManager(models.Manager):
         # if test has no not-answered questions, close it and show result (check if result already calculated)
         return test.get_result()        
         # entities should know their types
-    
+
+    def get_prev_step(self, **kwargs):
+        # if has no tests, start new one
+        # get last test by start_datetime
+        user = kwargs.get('user')
+        test = self._get_last_test4user(user)
+       
+        if test.answered_questions_count < 1 or kwargs.get('current') <= 1:
+              # if user has no answered questions or answered only to first one
+              # or if user tries to break our logic ;)
+             return TestQuestion.objects.order_by('order_number').first().to_json()
+        current = min(test.last_order_number + 1, kwargs.get('current')) 
+        if current > TestQuestion.objects.max_order_number() + 1:
+             # if user trying to break our ligic by passing bigger than possible order number
+             return TestQuestion.objects.order_by('-order_number').first().to_json()
+        return test.get_prev_question(current)
+            
     def answer2question(self, **kwargs):
         user, answer = [kwargs.get(key) for key in ['user', 'answer']]
         # get last test
@@ -139,6 +163,11 @@ class TestToUser(models.Model):
     def answered_questions_count(self):
         return self.testquestiontouser_set.count()
      
+    @property
+    def last_order_number(self):
+        return self.testquestiontouser_set.aggregate(
+            models.Max('question__order_number'))['question__order_number__max'] or 0
+            
     def answer(self, answer):
         try:
             user2question = self.testquestiontouser_set.get(question=answer.question) 
@@ -159,14 +188,21 @@ class TestToUser(models.Model):
         self.save(update_fields=['end_datetime', ]) 
               
     def get_next_question(self):
-        last_order_number = self.testquestiontouser_set.aggregate(
-            models.Max('question__order_number'))['question__order_number__max'] or 0
-        return TestQuestion.objects.get(order_number = last_order_number + 1)
+        #TODO: can be done in manager mb
+        return TestQuestion.objects.get(order_number = self.last_order_number + 1)
         #try:
         #    return TestQuestion.objects.get(order_number = last_order_number + 1)
         #except TestQuestion.DoesNotExist: # assume we are trying to get last one -> normally s
         #    return TestQuestion.objects.get(order_number = last_order_number)
-        
+
+    def get_prev_question(self, current):
+        #TODO: can be done in manager mbs
+        question = TestQuestion.objects.get(order_number = current - 1)
+        selected_answer_id = self.testquestiontouser_set.get(question__id=question.id).answer_id
+        question = question.to_json()
+        question.update({'selected_answer_id': selected_answer_id})
+        return question
+                
     def get_result(self):
         if self.end_datetime and self.result:
             return self.result

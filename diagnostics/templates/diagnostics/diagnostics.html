@@ -100,14 +100,17 @@
         var TestAnswer = React.createClass({
             answer: function(e) {
                 var answer = $(e.target).data('id');
-                console.log(answer);
                 this.props.answerOnQuestion(answer);
             },
             
             render: function() {
                 return (
                     <p className="testAnswer"> 
-                        <input name="answer" type="radio" data-id={this.props.answer.id} onChange={this.answer} />
+                        <input name="answer" type="radio" 
+                        data-id={this.props.answer.id} 
+                        checked={this.props.answer.id === this.props.selectedAnswerId}
+                        onChange={this.answer} />
+                        
                         <span dangerouslySetInnerHTML={% templatetag openvariable %}__html: this.props.answer.answer{% templatetag closevariable %}></span>
                     </p>
                 );
@@ -120,7 +123,8 @@
                     <div className="testAnswerList">
                     <form>
                     {this.props.answers.map(function(answer) {
-                        return <TestAnswer key={answer.id} answer={answer} answerOnQuestion={this.props.answerOnQuestion} />;
+                        return <TestAnswer selectedAnswerId={this.props.selectedAnswerId} key={answer.id} 
+                                answer={answer} answerOnQuestion={this.props.answerOnQuestion} />;
                      }.bind(this))}
                      </form>
                      </div>
@@ -128,36 +132,36 @@
             }  
         });
         
-        var TestAnswerNextButton = React.createClass({
+        var TestAnswerNavigateButton = React.createClass({
             render: function() {
                 return (
-                    <button className="testAnswerButton" onClick={this.props.goToNext}>Ответить</button>
+                    <button className="testAnswerButton" onClick={this.props.goToNext}>{this.props.text}</button>
                 );
             }
         });
         
         var TestQuestionBox = React.createClass({
             getInitialState: function() {
-                return {answerId: undefined, errorMessage: ''};
+                return {errorMessage: ''};
             },
             
             answerOnQuestion: function(answerId) {
-                console.log(answerId);
-                this.setState({answerId: answerId, errorMessage: ''});        
+                this.setState({errorMessage: ''});  
+                this.props.setAnswerCallback(answerId);
             },
             
             goToNext: function(e){
                 e.preventDefault();
                 
-                if (!(this.state.answerId)) {
-                    this.setState({answerId: undefined, errorMessage: 'Выберите один ответ'}); 
+                if (!(this.props.selectedAnswer)) {
+                    this.setState({errorMessage: 'Выберите один ответ'}); 
                     return;     
                 } 
                 
                 $.ajax({
                     url: '/ajax/diagnostic/questions/' + this.props.question.id + '/',
                     type: 'POST',
-                    data: {answer: this.state.answerId},
+                    data: {answer: this.props.selectedAnswer},
                     success: function(data) {
                         this.props.getNextCallback();
                     }.bind(this),
@@ -166,14 +170,28 @@
                     }.bind(this)
                 });  
             },
-            
+
+            goToPrev: function(e){
+                e.preventDefault();
+                this.props.getPrevCallback();
+            },
+                        
             render: function() {
                 return (
                     <div className="testQuestionBox">
                         <p> {this.state.errorMessage} </p>
-                        <TestQuestion question={this.props.question.question}/>
-                        <TestAnswerList answerOnQuestion={this.answerOnQuestion} answers={this.props.answers} />
-                        <TestAnswerNextButton goToNext={this.goToNext}/>
+                        <TestQuestion question={this.props.question.question} />
+                        <TestAnswerList 
+                         selectedAnswerId={this.props.selectedAnswer} 
+                         answerOnQuestion={this.answerOnQuestion} 
+                         answers={this.props.answers} />
+                         
+                        <TestAnswerNavigateButton text="Ответить" goToNext={this.goToNext}/>
+                        {
+                            this.props.question.order_number > 1 ?
+                            <TestAnswerNavigateButton text="Назад" goToNext={this.goToPrev}/>:
+                            ''
+                        }
                     </div>
                 );
             }        
@@ -214,9 +232,9 @@
                 return {data: {type: 'unknown'}};
             },
             
-            loadNextFromServer() {
+            loadFromServer(url) {
                 $.ajax({
-                    url: '/ajax/diagnostic/next/',
+                    url: url,
                     dataType: 'json',
                     cache: false,
                     success: function(data) {
@@ -228,8 +246,23 @@
                 });
             },
             
+            loadNextFromServer: function() {
+                this.loadFromServer('/ajax/diagnostic/next/');
+            },   
+
+            loadPrevFromServer: function() {
+                this.loadFromServer('/ajax/diagnostic/prev/?current=' + (this.state.data.question.order_number || 1));
+            },
+                                    
             componentDidMount: function() {
                 this.loadNextFromServer();    
+            },
+            
+            setAnswerCallback: function(answerId) {
+                var data = this.state.data;
+                data.selected_answer_id = answerId;
+                this.setState({data: data});
+                console.log(this.state.data.selected_answer_id);
             },
             
             render: function() {
@@ -237,7 +270,13 @@
                     <div className="testBox">
                     <h1>Test</h1>
                     {this.state.data.type == 'question' ? 
-                     <TestQuestionBox getNextCallback={this.loadNextFromServer} question={this.state.data.question} answers={this.state.data.answers} /> :
+                     <TestQuestionBox 
+                     getPrevCallback={this.loadPrevFromServer} 
+                     getNextCallback={this.loadNextFromServer} 
+                     question={this.state.data.question}
+                     answers={this.state.data.answers} 
+                     selectedAnswer={this.state.data.selected_answer_id}
+                     setAnswerCallback={this.setAnswerCallback}/> :
                      this.state.data.type == 'result' ? 
                      <TestResultBox result={this.state.data.result} />:
                      <TestPreloader/>}
