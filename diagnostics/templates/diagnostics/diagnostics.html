@@ -8,7 +8,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.8.34/browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/remarkable/1.6.2/remarkable.min.js"></script>
-    <script src="https://npmcdn.com/react-router/umd/ReactRouter.min.js"></script>
+    <!-- <script src="https://npmcdn.com/react-router/umd/ReactRouter.min.js"></script> -->
   </head>
   <body>
     <div id="content"></div>
@@ -16,15 +16,13 @@
         var TestInfo = React.createClass({
             render: function() {
                 return (
-                    <div className="testInfo">
-                    {this.props.test.text}
-                    </div>
+                    <div className="testInfo" dangerouslySetInnerHTML={% templatetag openvariable %}__html: this.props.test.text{% templatetag closevariable %}></div>
                 );
             }
         });
   
         var TestButton = React.createClass({
-            handleSubmit: function(e) {
+            handleStartTest: function(e) {
                 e.preventDefault();
                 this.props.startTest();
             },
@@ -37,13 +35,13 @@
             }
         });
         
-        var TestBox = React.createClass({
+        var Diagnostic = React.createClass({
             getInitialState: function() {
                 return {data: {}};
             },
             componentDidMount: function() {
                 $.ajax({
-                    url: this.props.url,
+                    url: '/ajax/diagnostic/',
                     dataType: 'json',
                     cache: false,
                     success: function(data) {
@@ -54,14 +52,14 @@
                     }.bind(this)
                 });
             },
+            
             handleStartTest: function() {
                 $.ajax({
                     url: '/ajax/diagnostic/start/',
-                    dataType: 'json',
                     cache: false,
                     type: 'POST',
                     success: function(data) {
-                        //reload page
+                        window.location.href = '/diagnostic/#test';
                     }.bind(this),
                     error: function(xhr, status, err) {
                         console.error(this.props.url, status, err.toString());
@@ -71,7 +69,7 @@
             
             render: function() {
                 return (
-                    <div className="testBox">
+                    <div className="diagnosticBox">
                     <h1>Diagnostic</h1>
                     <TestInfo test={this.state.data}/>
                     <TestButton startTest={this.handleStartTest}/>
@@ -80,10 +78,204 @@
             }
         });
         
-        ReactDOM.render(
-            <CommentBox url="/ajax/diagnostic/" />,
-            document.getElementById('content')
-        );
-    </script>
+        var TestPreloader = React.createClass({
+            render: function() {
+                return (
+                    <div className="testPreloader">
+                    <h1>Im test preloader</h1>
+                    </div>
+                );
+            }        
+        });
+        
+        var TestQuestion = React.createClass({
+            render: function() {
+                return (
+                    <div className="testQuestion" dangerouslySetInnerHTML={% templatetag openvariable %}__html: this.props.question{% templatetag closevariable %} >
+                    </div>
+                );
+            }            
+        });
+        
+        var TestAnswer = React.createClass({
+            answer: function(e) {
+                var answer = $(e.target).data('id');
+                console.log(answer);
+                this.props.answerOnQuestion(answer);
+            },
+            
+            render: function() {
+                return (
+                    <p className="testAnswer"> 
+                        <input name="answer" type="radio" data-id={this.props.answer.id} onChange={this.answer} />
+                        <span dangerouslySetInnerHTML={% templatetag openvariable %}__html: this.props.answer.answer{% templatetag closevariable %}></span>
+                    </p>
+                );
+            }
+        });
+        
+        var TestAnswerList = React.createClass({
+            render: function() {
+                return (
+                    <div className="testAnswerList">
+                    <form>
+                    {this.props.answers.map(function(answer) {
+                        return <TestAnswer key={answer.id} answer={answer} answerOnQuestion={this.props.answerOnQuestion} />;
+                     }.bind(this))}
+                     </form>
+                     </div>
+                ); 
+            }  
+        });
+        
+        var TestAnswerNextButton = React.createClass({
+            render: function() {
+                return (
+                    <button className="testAnswerButton" onClick={this.props.goToNext}>Ответить</button>
+                );
+            }
+        });
+        
+        var TestQuestionBox = React.createClass({
+            getInitialState: function() {
+                return {answerId: undefined, errorMessage: ''};
+            },
+            
+            answerOnQuestion: function(answerId) {
+                console.log(answerId);
+                this.setState({answerId: answerId, errorMessage: ''});        
+            },
+            
+            goToNext: function(e){
+                e.preventDefault();
+                
+                if (!(this.state.answerId)) {
+                    this.setState({answerId: undefined, errorMessage: 'Выберите один ответ'}); 
+                    return;     
+                } 
+                
+                $.ajax({
+                    url: '/ajax/diagnostic/questions/' + this.props.question.id + '/',
+                    type: 'POST',
+                    data: {answer: this.state.answerId},
+                    success: function(data) {
+                        this.props.getNextCallback();
+                    }.bind(this),
+                    error: function(xhr, status, err) {
+                        console.error(this.props.url, status, err.toString());
+                    }.bind(this)
+                });  
+            },
+            
+            render: function() {
+                return (
+                    <div className="testQuestionBox">
+                        <p> {this.state.errorMessage} </p>
+                        <TestQuestion question={this.props.question.question}/>
+                        <TestAnswerList answerOnQuestion={this.answerOnQuestion} answers={this.props.answers} />
+                        <TestAnswerNextButton goToNext={this.goToNext}/>
+                    </div>
+                );
+            }        
+        });
+        
+        var TestResult = React.createClass({
+            render: function() {
+                return (
+                    <div className="testResult" dangerouslySetInnerHTML={% templatetag openvariable %}__html: this.props.result{% templatetag closevariable %}>
+                    </div>
+                );
+            }
+        });
+        
+        var TestRestartButton = React.createClass({
+            render: function() {
+                return (
+                    <a href="/diagnostic">
+                        Пройти заново
+                    </a>
+                );
+            }            
+        });
+        
+        var TestResultBox = React.createClass({
+            render: function() {
+                return (
+                    <div className="testResultBox">
+                        <TestResult result={this.props.result.result}/>
+                        <TestRestartButton />
+                    </div>
+                );
+            }     
+        });
+        
+        var Test = React.createClass({
+            getInitialState: function() {
+                return {data: {type: 'unknown'}};
+            },
+            
+            loadNextFromServer() {
+                $.ajax({
+                    url: '/ajax/diagnostic/next/',
+                    dataType: 'json',
+                    cache: false,
+                    success: function(data) {
+                        this.setState({data: data});
+                    }.bind(this),
+                    error: function(xhr, status, err) {
+                        console.error(this.props.url, status, err.toString());
+                    }.bind(this)
+                });
+            },
+            
+            componentDidMount: function() {
+                this.loadNextFromServer();    
+            },
+            
+            render: function() {
+                return (
+                    <div className="testBox">
+                    <h1>Test</h1>
+                    {this.state.data.type == 'question' ? 
+                     <TestQuestionBox getNextCallback={this.loadNextFromServer} question={this.state.data.question} answers={this.state.data.answers} /> :
+                     this.state.data.type == 'result' ? 
+                     <TestResultBox result={this.state.data.result} />:
+                     <TestPreloader/>}
+                    </div>
+                );
+            }
+        });
+        // TODO: place in utils   
+        var App = React.createClass({
+            render: function() {
+                switch (this.props.location[0])  {
+                case 'test':
+                    return <Test/>;
+
+                default:
+                    return <Diagnostic/>;
+                }
+            }
+        });
+
+        function handleNewHash() {
+            var location = window.location.hash.replace(/^#\/?|\/$/g, '').split('/');
+            var app = <App location={location} />;
+            ReactDOM.render(app, document.getElementById('content'));
+        }
+        handleNewHash()
+        window.addEventListener('hashchange', handleNewHash, false);
+        </script>
+        
+    <!-- </script>
+    <script type="text/jsx">        
+        ReactDOM.render((
+            <Router history={browserHistory}>
+                <Route path="/" component={Diagnostic}>
+                    <Route path="test" component={Test}/>
+                </Route>
+           </Router> 
+        ), document.getElementById('content'));
+    </script> -->
   </body>
 </html>

@@ -49,8 +49,8 @@ class TestResult(models.Model, JSONMixin):
     video = models.CharField('Video', max_length=255, null=True, blank=True)
     image = models.CharField(u'Фото', max_length=255, null=True, blank=True)
         
-    related_questions = models.ManyToManyField('consultations.FAQ', verbose_name=u'Типовые вопросы')
-    related_articles = models.ManyToManyField('content.Article', verbose_name=u'Релевантные статьи')
+    related_questions = models.ManyToManyField('consultations.FAQ', verbose_name=u'Типовые вопросы', blank=True)
+    related_articles = models.ManyToManyField('content.Article', verbose_name=u'Релевантные статьи', blank=True)
     
     def to_json(self):
         json_ = super(TestResult, self).to_json()

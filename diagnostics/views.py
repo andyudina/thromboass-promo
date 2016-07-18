@@ -1,5 +1,6 @@
 from django.http import HttpResponse, Http404, JsonResponse
-from django.views.generic.base import TemplateView
+from django.shortcuts import render_to_response
+from django.views.generic import View
 
 from thromboass_webapp.utils.base_view import BaseView, ParamsValidationError
 from diagnostics.models import TestQuestion, TestAnswer, TestResult, TestToUser, TestQuestionToUser
@@ -45,7 +46,7 @@ class AnswerQuestionView(BaseView):
                    
 class DiagnosticView(View):
     def get(self, request, *args, **kwargs):
-        if not request.is_ajax: return render_to_response("diagnostics/diagnostics.html")
+        if not kwargs.get('is_ajax'): return render_to_response("diagnostics/diagnostics.html")
         return JsonResponse(Test.objects.first().to_json(), safe=False)              
        
               
