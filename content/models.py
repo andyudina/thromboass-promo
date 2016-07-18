@@ -73,7 +73,7 @@ class Item(models.Model):
         verbose_name = u"Продукт"
         verbose_name_plural = u"Продукты"  
         
-class Test(models.Model):
+class Test(models.Model, JSONMixin):
     text = HTMLField(u'Текст')
     title = models.CharField(u'Заголовок', max_length=255)
     short_title = models.CharField(u'Заголовок второго порядка', max_length=255)

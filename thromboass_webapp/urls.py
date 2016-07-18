@@ -22,7 +22,7 @@ from diagnostics import urls as diagnostic_urls
 
 urlpatterns = [
     url(r'^admin/', include(admin.site.urls)),
-    url(r'^(ajax/)?consultations/', include(consult_urls)),
-    url(r'^(ajax/)?diagnostic/', include(diagnostic_urls)),
+    url(r'^(?P<is_ajax>ajax/)?consultations/', include(consult_urls)),
+    url(r'^(?P<is_ajax>ajax/)?diagnostic/', include(diagnostic_urls)),
     url(r'', include(content_urls)),    
 ]
