@@ -21,8 +21,8 @@ class IsAnsweredFilter(admin.SimpleListFilter):
             return queryset.filter(is_answered=False)
             
 class ConsultationAdmin(admin.ModelAdmin):
-    exclude = ('is_answered','answered_consultant', 'answered_datetime', 'notification_sent_at')
-    readonly_fields = ('created_at', )
+    exclude = ('is_answered','answered_consultant', 'notification_sent_at', 'answer_sent_at')
+    readonly_fields = ('created_at', 'answered_datetime')
     list_filter = (IsAnsweredFilter, )
 
 admin.site.register(Consultation, ConsultationAdmin)

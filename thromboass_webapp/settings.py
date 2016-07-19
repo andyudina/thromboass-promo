@@ -123,7 +123,7 @@ LOGGING = {
 }
 
 # CONSULTANT EMAILS 
-BASE_URL = 'http://127.0.0.1:8000/'
+BASE_URL = 'http://127.0.0.1:8000'
 CONSULTANT_EMAIL = 'anastasia@picasel.agency'
 INFO_EMAIL = 'anastasia@picasel.agency'
 

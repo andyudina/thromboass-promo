@@ -1,4 +1,6 @@
 from django.http import HttpResponse, Http404, HttpResponseForbidden
+from django.shortcuts import render_to_response
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.contrib.admin.views.decorators import staff_member_required
 
@@ -7,6 +9,10 @@ from consultations.models import Consultation, FAQ
 from consultations.tasks import send_notification2consultant, send_consult_answer
 
 class ConsultView(BaseView):
+    def get(self, request, *args, **kwargs):
+        if not kwargs.get('is_ajax'): return render_to_response("consultations/consultation.html")
+        return JsonResponse({})
+        
     def post(self, request, *args, **kwargs):
         EXPECTED_PARAMS = ['name', 'email', 'question', ]
         try:
@@ -14,12 +20,13 @@ class ConsultView(BaseView):
         except ParamsValidationError as e:
             return self.error('not_enough_fields', e.args[0])
         consultation = Consultation.objects.create(**params)
+        print 'CALLING send_notification2consultant'
         send_notification2consultant.delay(consultation.id)
         return HttpResponse()
 
 def is_staff_decoraror(f):
     def wrapped(self, request, *args, **kwargs):
-        if not request.user.is_staff: return HttpResponseForbidden()
+        if not request.user.is_staff and not request.user.is_superuser: return HttpResponseForbidden()
         return f(self, request, *args, **kwargs)    
     return wrapped
     
@@ -49,8 +56,10 @@ class ConsultAnswerView(StaffOnlyView):
         
         params.update({
             'answered_consultant': request.user,
+            'answered_datetime': timezone.now(),
         })
         Consultation.objects.filter(id=consultation.id).update(**params)
+        print 'CALLING send_consult_answer'
         send_consult_answer.delay(consultation.id)
         return HttpResponse()
             
