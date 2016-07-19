@@ -2,6 +2,7 @@
 
 from django.db import models
 from django.utils import timezone
+from django.template import loader, Context
 from tinymce.models import HTMLField
 
 from thromboass_webapp.utils.base_model import JSONMixin
@@ -88,8 +89,10 @@ class Test(models.Model, JSONMixin):
         verbose_name_plural = u"Тесты"
                
 class Article(models.Model, JSONMixin):
+    _templates = {}
+    
     title = models.CharField(u'Заголовок', max_length=255) #TODO: detailed blocks??
-    text = HTMLField(u'Текст')  
+    #text = HTMLField(u'Текст')  
     preview = models.TextField(u'Превью')
     photo = models.ImageField(u'Фото', upload_to='media/')
     image = models.ImageField(u'Иллюстрация', upload_to='media/')
@@ -100,7 +103,76 @@ class Article(models.Model, JSONMixin):
     
     def __unicode__(self):
         return self.title
-        
+
+    def preproc(self):
+        article_items = []
+        for item in self.articleitem_set.all():
+            if not 'link' in item.type:
+                # если не линкующиеся элементы, ничего с ними не делаем
+                article_items.append({'type': item.type, 'item': item})
+                continue
+            # собираем идущие подряд линки (ссылки на доп статьи/ список литры) в одну группу
+            last_element = article_items and article_items[-1]
+            if last_element and last_element.get('type') == item.type: #продолжаем существующую группу
+                last_element.get('items').append(item)
+            else: #начинаем новую
+                article_items.append(
+                    {
+                        'type': item.type,
+                        'items': [item,]
+                    }    
+                ) 
+        return article_items
+               
+    def render(self):
+        def _get_template_name(type_):
+            return 'content/article/{}.html'.format(type_)
+            
+        data = self.preproc()
+        templates = []
+        for element in data:
+            if self._templates.get(element.get('type')):
+                template = self._templates[element.get('type')]
+            else:
+                template = _get_template_name(element.get('type'))
+                template = loader.get_template(template)
+                self._templates[element.get('type')] = template
+            context = Context(element)
+            templates.append(template.render(context))
+            
+        main_template = loader.get_template(_get_template_name('main'))
+        return main_template.render(Context({'blocks': templates}))
+
     class Meta:
         verbose_name = u"Статья"
-        verbose_name_plural = u"Статьи" 
+        verbose_name_plural = u"Статьи"
+         
+
+ARTICLE_ITEM_CHOICES = (
+    ('text', u'Единый текстовый блок'),
+    ('title', u'Заголовок'),
+    ('subtitle', u'Подзаголовок'),
+    ('quote', u'Цитата'),
+    ('abstract', u'Выжимка для акцентирования внимания'),
+    ('literature_link', u'Cписок литературы'),
+    ('extra_article_link', u'Ссылки на дополнительные статьи'),
+    ('graphcontent', u'Графический контент'),
+    ('photo', u'Фото'),
+    ('illustration', u'Иллюстрация'),      
+)
+        
+class ArticleItem(models.Model):
+    article = models.ForeignKey('Article', verbose_name='Статья')
+    value = models.TextField(u'Контент')
+    type = models.CharField(u'Тип', max_length=255, choices=ARTICLE_ITEM_CHOICES)
+    
+    def __unicode__(self):
+        return u'{} {} статьи "{}"'.format(
+            self.get_type_display(),
+            self.id,
+            self.article.title
+        ) 
+        
+    class Meta:
+        verbose_name = u"Элемент статьи"
+        verbose_name_plural = u"Элементы статьи"   
