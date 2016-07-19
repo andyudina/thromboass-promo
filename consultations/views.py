@@ -1,4 +1,5 @@
 from django.http import HttpResponse, Http404, HttpResponseForbidden
+from django.shortcuts import render_to_response
 from django.utils.decorators import method_decorator
 from django.contrib.admin.views.decorators import staff_member_required
 
@@ -7,6 +8,10 @@ from consultations.models import Consultation, FAQ
 from consultations.tasks import send_notification2consultant, send_consult_answer
 
 class ConsultView(BaseView):
+    def get(self, request, *args, **kwargs):
+        if not kwargs.get('is_ajax'): return render_to_response("consultations/consultation.html")
+        return JsonResponse({})
+        
     def post(self, request, *args, **kwargs):
         EXPECTED_PARAMS = ['name', 'email', 'question', ]
         try:

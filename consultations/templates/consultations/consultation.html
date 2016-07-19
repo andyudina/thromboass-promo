@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Consultation Example</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/15.2.1/react.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/15.2.1/react-dom.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.8.34/browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/remarkable/1.6.2/remarkable.min.js"></script>
+    <script src="http://underscorejs.org/underscore-min.js"></script>
+    <style>
+        .errorField: {
+            border: 1px solid red;
+        }
+    </style>
+  </head>
+  <body>
+    <div id="content"></div>
+    <script type="text/babel">
+        var ConsultationForm = React.createClass({
+            _getInitialFieldState: function() {
+                return {
+                    value: undefined,
+                    error: false
+                }
+            },
+            
+            _getInitialConsultationState: function() {
+                var consultation = {};
+                var properties = ['name', 'email', 'question'];
+                for (var propertyIndex in properties) {
+                    consultation[properties[propertyIndex]] = this._getInitialFieldState();
+                }
+                return consultation;
+            },
+            
+            getInitialState: function() {
+                return {
+                    sendState: {
+                        error: '', isSuccessfullySent: false, 
+                    },
+                    
+                    consultation: this._getInitialConsultationState()
+                };
+            },
+            
+            _copyState: function() {
+                return {
+                    sendState: this.state.sendState,
+                    consultation: this.state.consultation,
+                };
+                    
+            },
+            
+            _changeFieldErrState: function(fieldName, errState) {
+                var state = this._copyState();
+                state.consultation[fieldName].error = errState;
+                this.setState(state); 
+            },
+            
+            highlightErrorFieldByName: function(fieldName) {
+                this._changeFieldErrState(fieldName, true);  
+            },
+            
+            hideErrorLightingForField: function(fieldName) {
+                this._changeFieldErrState(fieldName, false);
+            },
+            
+            checkAndHighlightEmptyFields: function() {
+                var resultErrorFlag = false;
+                for (var fieldName in this.state.consultation) {
+                    if (typeof this.state.consultation[fieldName].value == 'undefined') {
+                        this.highlightErrorFieldByName(fieldName);
+                        resultErrorFlag = true;   
+                    }
+                }
+                
+                if (resultErrorFlag) {
+                    var state = this._copyState();
+                    state.sendState = {
+                        error: 'Заполните все поля', isSuccessfullySent: false,
+                    };
+                    this.setState(state);
+                       
+                }
+                return resultErrorFlag;
+            },
+           
+            _getDataToBeSent: function() {
+                return _.mapObject(this.state.consultation, function(val, key) {
+                    return val.value;
+                });
+            },
+            
+            sendSuccessCallback: function() {
+                var state = this._copyState();
+                state.sendState = {
+                    error: '', isSuccessfullySent: true,
+                };
+                this.setState(state);                
+            },
+            
+            sendErrorCallback: function(error) {
+                //set err msg
+                var state = this._copyState();
+                state.sendState = {
+                    error: error.message, isSuccessfullySent: false,
+                };
+                this.setState(state);
+                
+                //highlight all err fields
+                for (var fieldIndex in error.fields) {
+                    this.highlightErrorFieldByName(error.fields[fieldIndex]);
+                }            
+            },
+            
+            createConsultation: function() {
+                $.ajax({
+                    url: '/ajax/consultations/',
+                    data: this._getDataToBeSent(),
+                    type: 'POST',
+                    cache: false,
+                    success: function(data) {
+                        this.sendSuccessCallback();
+                    }.bind(this),
+                    error: function(xhr, status, err) {
+                        var errObj = $.parseJSON(xhr.responseText);
+                        this.sendErrorCallback(errObj);
+                        // light up error fields
+                    }.bind(this)
+                });
+                            
+            },
+
+            handleAskConsultation: function(e) {
+                e.preventDefault();
+                
+                if (this.checkAndHighlightEmptyFields()) { //check for bad fields => ste them a class
+                    return;
+                }
+                this.createConsultation();
+            },
+            
+            onNecessaryFieldChangeCallback: function(e) {
+                var fieldName = $(e.target).attr('name');
+                var value = $(e.target).val();
+                var state = this._copyState();
+                state.consultation[fieldName] = {
+                    value: value,
+                    error: _.isEmpty(value)
+                };
+                this.setState(state);                     
+            },
+             
+            render: function() {
+                var errFieldStyle = {
+                     border: '1px solid red'
+                };
+                return (
+                    <div>
+                    {
+                    this.state.sendState.isSuccessfullySent?
+                    <p>Спасибо за ваш вопрос!</p>:
+                    <form ref='form'  className="sendConsultForm" onSubmit={this.handleAskConsultation}>
+                        <p>{this.state.sendState.error}</p>
+                        <p>
+                            <label htmlFor="name">Имя</label>
+                            <input onBlur={this.onNecessaryFieldChangeCallback} 
+                                   id="name" name="name" 
+                                   style={this.state.consultation.name.error? errFieldStyle: {}}/>
+                        </p>
+                        <p>
+                            <label htmlFor="email">Email</label>
+                            <input onBlur={this.onNecessaryFieldChangeCallback} 
+                                   id="email" name="email" 
+                                   style={this.state.consultation.email.error? errFieldStyle: {}}/>
+                         </p>
+                        <p>
+                            <textarea onBlur={this.onNecessaryFieldChangeCallback} 
+                                      placeholder="Ваш вопрос" name="question" id="question"
+                                      style={this.state.consultation.question.error? errFieldStyle: {}}/>
+                        </p>
+                        <p><input type="submit" value="Спросить" /></p>
+                    </form>}
+                    </div>
+                );
+            }
+        });
+
+        ReactDOM.render(<ConsultationForm />, document.getElementById('content'));
+        </script>
+  </body>
+</html>
