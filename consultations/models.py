@@ -38,11 +38,12 @@ class Consultation(models.Model, ShortQuestionMixin):
     created_at = models.DateTimeField(u'Дата и время создания', default=timezone.now)
     
     answered_consultant = models.ForeignKey('auth.User', null=True, blank=True)
-    answered_datetime = models.DateTimeField(u'Дата и время ответа', null=True, blank=True)
-    notification_sent_at = models.DateTimeField(u'Дата и время отправки уведомления коснультанту', null=True, blank=True)
+    answered_datetime = models.DateTimeField(u'Дата и время ответа', null=True, blank=True) 
+                        #shoudn't be hidden in admin -> need for js check answer logic
+    notification_sent_at = models.DateTimeField(u'Дата и время отправки уведомления коснультанту by celery', null=True, blank=True)
     answer_sent_at = models.DateTimeField(
-        u'Дата и время отправки ответа', 
-        null=True, blank=True) #shoudn't be hidden in admin -> need for js check answer logic
+        u'Дата и время отправки ответа by celery', 
+        null=True, blank=True)
     
     @property
     def is_answered(self):

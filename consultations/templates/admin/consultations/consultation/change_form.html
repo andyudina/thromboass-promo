@@ -1,0 +1,159 @@
+<style media="screen">  
+  .errorField {
+      border: 5px solid red;
+  }
+  
+  .errorText {
+      color: red;
+  }
+  
+  .successText {
+      color: green;
+  }
+  
+</style>
+{% extends "admin/change_form.html" %}
+
+{% block submit_buttons_bottom %}
+{{ block.super }}
+<div class="js-action-message"></div>
+<div class="js-answer-buttons">
+  <div>
+      <button class="js-answer" style="border-radius: 0; border: 2px solid #5b80b2; background-color: #7CA0C7; color: #fff; padding: 2px 15px;">
+          Ответить
+      </button>
+  </div>
+</div>
+
+<div class="js-add-to-faq-buttons">
+  <div>
+      <p>
+          <label for="is_on_faq_page" >Показывать на странице FAQ</label>
+          <input class="js-faq-flags" id="is_on_faq_page" name="is_on_faq_page" type="checkbox" checked="checked" />
+      </p>
+      <p>
+          <label for="is_on_item_page" >Показывать на странице товара</label>
+          <input class="js-faq-flags" id="is_on_item_page" name="is_on_item_page" type="checkbox"/>
+      </p>
+          <button class="js-add-to-faq" style="border-radius: 0; border: 2px solid #CC3434; background-color: #da7777; color: #fff; padding: 2px 15px;">
+  
+          Добавить в FAQ
+      </button>
+  </div>
+</div>
+{% endblock %}
+
+{% block admin_change_form_document_ready %}
+    {{ block.super }}
+    <script type="text/javascript">
+      function getId() {
+          var url = window.location.pathname;
+          if (url.slice(-1) == '/') {
+              url = url.substring(0, url.length - 1);
+          }
+          var id = url.substring(url.lastIndexOf('/') + 1);
+          return id;
+      }
+
+      (function($) {
+      
+      //helpers
+      function getAnswer() {
+          return $('#id_answer').val();
+      }
+      
+      function higlightErrField(fieldName) {
+          $('#id_' + fieldName).addClass('errorField');
+      }
+
+      function removeErrFieldLightning(fieldName) {
+          $('#id_' + fieldName).removeClass('errorField');
+      }
+            
+      function showError(message='Заполните поле "Ответ"', errorFields=['answer']) {
+          $('.js-action-message').text(message);
+          $('.js-action-message').addClass('errorText');
+          for (var fieldIndex in errorFields) {
+              higlightErrField(errorFields[fieldIndex]);
+          }
+      }
+      
+      function hideActionMessage() {
+          $('.js-action-message').text('');
+          $('.js-action-message').removeClass('errorText successText');
+      }
+      
+      function showSuccess(message) {
+          $('.js-action-message').text(message);
+          $('.js-action-message').addClass('successText');   
+      }
+      
+      function hideAnswerBtn() {
+          $('.js-answer-buttons').hide();
+      }
+      
+      //event handlers
+      $(document).ready(function() {
+
+          if ($('.field-answered_datetime > div > p').text() != '(None)') {
+              hideAnswerBtn();
+          }
+          $('.field-answered_datetime').hide();
+          
+          $('#id_answer').blur(function(event) {
+               if ($(event.target).val()) {
+                   hideActionMessage();
+                   removeErrFieldLightning('answer');
+               } else {
+                   showError();
+               }
+          });
+          
+          $('.js-answer').click(function(event) {
+              event.preventDefault();
+              var consultId = getId();
+              var answer = getAnswer();
+              if (!(answer)) {
+                  showError();
+                  return;
+              }
+              
+              $.ajax({
+                  url: "/ajax/consultations/" + consultId + '/',
+                  method: 'POST',
+                  data: {answer: answer}
+              }).done(function() {
+                  showSuccess('Ответ на косультацию отправлен');
+                  hideAnswerBtn();
+              }).error(function(data) {
+                  showError(data.message);
+              });
+          });
+          
+          $('.js-add-to-faq').click(function(event) {
+              event.preventDefault();
+              var consultId = getId();
+              var answer = getAnswer();
+              if (!(answer)) {
+                  showError();
+                  return;
+              }
+              var data = {answer: answer};
+              $('.js-faq-flags').forEach(function() {
+                  data[$(this).attr('name')] = $(this).is(":checked");  
+              });
+              
+              $.ajax({
+                  url: "/ajax/consultations/" + consultId + '/2faq/',
+                  method: 'POST',
+                  data: data,
+              }).done(function() {
+                  showSuccess('Консультация добавлена в FAQ');
+              }).error(function(data) {
+                  showError(data.message);
+              });
+          });
+      });
+      })(django.jQuery);
+    </script>
+{% endblock %}

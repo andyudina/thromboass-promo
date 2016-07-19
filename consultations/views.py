@@ -1,5 +1,6 @@
 from django.http import HttpResponse, Http404, HttpResponseForbidden
 from django.shortcuts import render_to_response
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.contrib.admin.views.decorators import staff_member_required
 
@@ -24,7 +25,7 @@ class ConsultView(BaseView):
 
 def is_staff_decoraror(f):
     def wrapped(self, request, *args, **kwargs):
-        if not request.user.is_staff: return HttpResponseForbidden()
+        if not request.user.is_staff and not request.user.is_superuser: return HttpResponseForbidden()
         return f(self, request, *args, **kwargs)    
     return wrapped
     
@@ -54,6 +55,7 @@ class ConsultAnswerView(StaffOnlyView):
         
         params.update({
             'answered_consultant': request.user,
+            'answered_datetime': timezone.now(),
         })
         Consultation.objects.filter(id=consultation.id).update(**params)
         send_consult_answer.delay(consultation.id)
