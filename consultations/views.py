@@ -20,6 +20,7 @@ class ConsultView(BaseView):
         except ParamsValidationError as e:
             return self.error('not_enough_fields', e.args[0])
         consultation = Consultation.objects.create(**params)
+        print 'CALLING send_notification2consultant'
         send_notification2consultant.delay(consultation.id)
         return HttpResponse()
 
@@ -58,6 +59,7 @@ class ConsultAnswerView(StaffOnlyView):
             'answered_datetime': timezone.now(),
         })
         Consultation.objects.filter(id=consultation.id).update(**params)
+        print 'CALLING send_consult_answer'
         send_consult_answer.delay(consultation.id)
         return HttpResponse()
             

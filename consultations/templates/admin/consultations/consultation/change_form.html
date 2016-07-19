@@ -126,7 +126,7 @@
                   showSuccess('Ответ на косультацию отправлен');
                   hideAnswerBtn();
               }).error(function(data) {
-                  showError(data.message);
+                  showError(data.responseJSON.message);
               });
           });
           
@@ -139,7 +139,7 @@
                   return;
               }
               var data = {answer: answer};
-              $('.js-faq-flags').forEach(function() {
+              $('.js-faq-flags').each(function() {
                   data[$(this).attr('name')] = $(this).is(":checked");  
               });
               
@@ -150,7 +150,7 @@
               }).done(function() {
                   showSuccess('Консультация добавлена в FAQ');
               }).error(function(data) {
-                  showError(data.message);
+                  showError(data.responseJSON.message, data.responseJSON.fields);
               });
           });
       });

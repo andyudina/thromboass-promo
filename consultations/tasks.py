@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import absolute_import
+import inspect
 
 from celery import shared_task
 from django.utils import timezone
@@ -31,6 +32,7 @@ class SendEmailTaskFabric(object):
             return 
             
     def _is_already_sent(self, consultation):
+        print inspect.getsourcelines(getattr(self, '_get_already_sent_flag')) 
         if self._get_already_sent_flag(consultation):
             log(level='error', message='[CELERY NOTIFY CONSULTANT] consult with id {} already sent'.format(consultation.id))
             return True
@@ -48,9 +50,12 @@ class SendEmailTaskFabric(object):
     def as_task(self):
         def _task_function(consultation_id):
             consultation = self._get_consultation(consultation_id)
-            if consultation is None: return
-            if self._is_already_sent(consultation): return
-            if not self._send_email(consultation): return 
+            if consultation is None: 
+                return
+            if self._is_already_sent(consultation): 
+                return
+            if not self._send_email(consultation):
+                return 
             self._update_datetime(consultation)
         return _task_function
 
@@ -78,9 +83,11 @@ class SendNotifiEmail(SendEmailTaskFabric):
      
     def _update_datetime(self, consultation):
         consultation.notification_sent_at = timezone.now()
-        consultation.save(update_field=['notification_sent_at', ])
-                                           
-send_notification2consultant = shared_task(SendNotifiEmail().as_task())
+        consultation.save(update_fields=['notification_sent_at', ])
+        
+@shared_task                                          
+def send_notification2consultant(*args, **kwargs):
+    return SendNotifiEmail().as_task()(*args, **kwargs)
 
 class SendConsultAnswer(SendEmailTaskFabric):
     def _get_already_sent_flag(self, consultation):
@@ -102,6 +109,9 @@ class SendConsultAnswer(SendEmailTaskFabric):
      
     def _update_datetime(self, consultation):
         consultation.answer_sent_at = timezone.now()
-        consultation.save(update_field=['answer_sent_at', ])
+        consultation.save(update_fields=['answer_sent_at', ])
 
-send_consult_answer = shared_task(SendConsultAnswer().as_task())
+@shared_task                                          
+def send_consult_answer(*args, **kwargs):
+    return SendConsultAnswer().as_task()(*args, **kwargs)
+
