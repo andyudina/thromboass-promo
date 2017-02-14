@@ -98,7 +98,6 @@ STATIC_URL = '/static/'
 
 from localsettings import *
 
-SENDGRID_API_KEY = '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'
 
 LOGGING = {
     'version': 1,
